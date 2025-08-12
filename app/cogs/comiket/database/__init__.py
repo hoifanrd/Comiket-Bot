@@ -334,6 +334,19 @@ def get_active_polls():
     return rtn
 
 
+def get_paused_polls():
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT poll_id, title, channel_id, message_id, creator_id FROM polls WHERE status = 'Paused'
+        ORDER BY poll_id ASC
+    ''')
+    res = cursor.fetchall()
+    rtn = [(poll_id, title, int(channel_id), int(message_id), int(creator_id))
+           for poll_id, title, channel_id, message_id, creator_id in res]
+
+    return rtn
+
+
 def get_all_votes_by_user(user_id: int):
     cursor = conn.cursor()
     cursor.execute('''
