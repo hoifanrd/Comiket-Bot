@@ -2,7 +2,7 @@ from discord.ui import View, Button
 import discord
 import traceback
 
-from cogs.comiket.ui.buttons import *
+from cogs.polls.ui.buttons import *
 
 class PersistentPollView(View):
     def __init__(self, pool_id: int, items: list, prices: list, status: str = 'Active'):

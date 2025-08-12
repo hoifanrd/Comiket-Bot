@@ -1,12 +1,12 @@
 from discord.ui import Button, Select
 import discord
 
-import cogs.comiket.ui.views as views
+import cogs.polls.ui.views as views
 
-from cogs.comiket.ui.modals import EditItemModal
-from cogs.comiket import database
-from cogs.comiket import utils
-from cogs.comiket import handler
+from cogs.polls.ui.modals import EditItemModal
+from cogs.polls import database
+from cogs.polls import utils
+from cogs.polls import handler
 
 class ManageButton(Button):
     def __init__(self, poll_id: int):

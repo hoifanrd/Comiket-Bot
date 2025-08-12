@@ -9,11 +9,11 @@ import io
 from discord.ext import commands
 from discord.ui import Button, View
 
-from cogs.comiket.ui.modals import CreatePollModal
-from cogs.comiket.ui.views import PersistentPollView, TimeoutView
-from cogs.comiket import database
-from cogs.comiket import utils
-from cogs.comiket import handler
+from cogs.polls.ui.modals import CreatePollModal
+from cogs.polls.ui.views import PersistentPollView, TimeoutView
+from cogs.polls import database
+from cogs.polls import utils
+from cogs.polls import handler
 
 # 定義名為 Comiket 的 Cog
 class Comiket(commands.Cog):

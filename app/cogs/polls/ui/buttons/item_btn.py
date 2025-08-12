@@ -2,9 +2,9 @@ import discord
 from discord.ui import Button
 import asyncio
 
-from cogs.comiket import database
-from cogs.comiket.utils import check_voting_permission, is_special_item
-import cogs.comiket.ui.views as views
+from cogs.polls import database
+from cogs.polls.utils import check_voting_permission, is_special_item
+import cogs.polls.ui.views as views
 
 
 class ItemButton(Button):

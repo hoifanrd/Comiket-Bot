@@ -1,8 +1,8 @@
 from discord.ui import Button
 import discord
 
-from cogs.comiket import handler
-from cogs.comiket.utils import check_voting_permission, is_special_item
+from cogs.polls import handler
+from cogs.polls.utils import check_voting_permission, is_special_item
 
 class ResultButton(Button):
 

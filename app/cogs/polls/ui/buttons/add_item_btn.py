@@ -1,10 +1,10 @@
 from discord.ui import Button
 import discord
 
-from cogs.comiket.ui.modals import AddItemModal
-from cogs.comiket.utils import check_voting_permission
-from cogs.comiket import database
-from cogs.comiket import handler
+from cogs.polls.ui.modals import AddItemModal
+from cogs.polls.utils import check_voting_permission
+from cogs.polls import database
+from cogs.polls import handler
 
 class AddItemButton(Button):
     def __init__(self, poll_id: int):

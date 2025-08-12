@@ -2,9 +2,9 @@ from discord.ui import Button, Select
 import discord
 import asyncio
 
-from cogs.comiket.utils import check_voting_permission
-from cogs.comiket import database
-import cogs.comiket.ui.views as views
+from cogs.polls.utils import check_voting_permission
+from cogs.polls import database
+import cogs.polls.ui.views as views
 
 class CancelVoteButton(Button):
     def __init__(self, poll_id: int):

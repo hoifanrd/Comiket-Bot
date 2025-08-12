@@ -1,9 +1,9 @@
-from cogs.comiket import database
+from cogs.polls import database
 import discord
 from discord.ui import View, Button
 
-import cogs.comiket.ui.views as views
-from cogs.comiket.utils import is_special_item
+import cogs.polls.ui.views as views
+from cogs.polls.utils import is_special_item
 
 
 async def generate_results_embed(poll_id):

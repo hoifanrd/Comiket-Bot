@@ -7,8 +7,8 @@ from discord.ext import commands
 
 dotenv.load_dotenv()
 
-from cogs.comiket import database
-from cogs.comiket.ui.views import PersistentPollView
+from cogs.polls import database
+from cogs.polls.ui.views import PersistentPollView
 
 discord.utils.setup_logging(level=discord.utils.logging.DEBUG)
 intents = discord.Intents.all()

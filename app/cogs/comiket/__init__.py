@@ -1,1 +1,0 @@
-from .comiket import *
