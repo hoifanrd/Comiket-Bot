@@ -1,11 +1,12 @@
 import os
 import sqlite3
 
-db_path = os.environ.get("DB_PATH") 
-# 檢查環境變數 DB_PATH 是否設置
-if os.environ.get("DB_PATH") is None:
-    raise ValueError("DB_PATH environment variable is not set.")
+db_folder = os.environ.get("DB_FOLDER") 
+# 檢查環境變數 DB_FOLDER 是否設置
+if os.environ.get("DB_FOLDER") is None:
+    raise ValueError("DB_FOLDER environment variable is not set.")
 
+db_path = os.path.join(db_folder, "polls.db")
 print(f"Using database path: {db_path}")
 conn = sqlite3.connect(db_path)
 

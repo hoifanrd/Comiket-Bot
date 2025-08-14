@@ -15,8 +15,8 @@ from cogs.polls import database
 from cogs.polls import utils
 from cogs.polls import handler
 
-# 定義名為 Comiket 的 Cog
-class Comiket(commands.Cog):
+# 定義名為 Polls 的 Cog
+class Polls(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         
@@ -756,4 +756,4 @@ class Comiket(commands.Cog):
 # Cog 載入 Bot 中
 async def setup(bot: commands.Bot):
     database.init_db()
-    await bot.add_cog(Comiket(bot))
+    await bot.add_cog(Polls(bot))

@@ -17,7 +17,9 @@ bot = commands.Bot(command_prefix = os.getenv("PREFIX", "!"), intents=intents)
 # 當機器人完成啟動時
 @bot.event
 async def on_ready():
+    slash = await bot.tree.sync()
     print(f"目前登入身份 --> {bot.user}")
+    print(f"載入 {len(slash)} 個斜線指令")
 
 # 載入指令程式檔案
 @bot.command()
