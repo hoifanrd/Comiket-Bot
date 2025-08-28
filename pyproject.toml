@@ -1,0 +1,22 @@
+[project]
+name = "comiket"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.9.5",
+    "anthropic>=0.64.0",
+    "asyncpg>=0.30.0",
+    "discord>=2.3.2",
+    "discord-py>=2.5.2",
+    "dotenv>=0.9.9",
+    "google-api-python-client>=2.179.0",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+    "pillow>=11.3.0",
+    "pygsheets>=2.0.6",
+    "requests>=2.32.4",
+    "tqdm>=4.67.1",
+    "xlsxwriter>=3.2.5",
+]

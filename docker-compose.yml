@@ -1,0 +1,30 @@
+services:
+  discord-bot:
+    build: .
+    restart: always
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATA_FOLDER=${DATA_FOLDER}
+      - PREFIX=${PREFIX}
+      - TOKEN=${TOKEN}
+      - CURR_EVENT=${CURR_EVENT}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TWITTER_API_KEY=${TWITTER_API_KEY}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    restart: always
+    ports:
+      - "30514:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
