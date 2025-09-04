@@ -1,23 +1,35 @@
 import os
 import requests
+import logging
+import asyncio
 
 API_URL = "https://api.twitterapi.io/twitter/tweets"
 API_KEY = os.environ.get("TWITTER_API_KEY")
 
-def get_twitter_details(url):
+async def get_twitter_details(url):
     
     tweet_id = url.split('/')[-1].split('?')[0]
 
     querystring = {"tweet_ids": tweet_id}
     headers = {"X-API-Key": API_KEY}
-    response = requests.get(API_URL, headers=headers, params=querystring)
 
-    if response.status_code != 200:
-        raise Exception(f"Error fetching tweet details: {response.status_code} {url}")
+    cur_try = 1
+    while True:
+        logging.info(f"Fetching tweet details tweet {tweet_id}, attempt {cur_try}.")
+        response = requests.get(API_URL, headers=headers, params=querystring)
 
-    res_json = response.json()['tweets'][0]
-    if res_json['type'] != 'tweet':
-        raise Exception(f"Invalid tweet URL: {url}")
+        if response.status_code != 200:
+            raise Exception(f"Error fetching tweet details: {response.status_code} {url}")
+
+        res_json = response.json()['tweets'][0]
+        if res_json['type'] != 'tweet':
+            raise Exception(f"Invalid tweet URL: {url}")
+        
+        if 'userName' not in res_json['author']:
+            cur_try += 1
+            await asyncio.sleep(2)
+            continue
+        break
 
     author_name = res_json['author']['userName']
     author_title = res_json['author']['name']

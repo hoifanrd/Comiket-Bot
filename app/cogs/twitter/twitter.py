@@ -3,18 +3,21 @@ from discord.ext import commands
 from discord import app_commands, Interaction
 from discord.ui import View, Select, Button
 import discord
+import traceback
 
 from cogs.twitter.ui.modals import CircleInfoModal, CircleBoothModal
 from cogs.twitter.ui.views import SelectCircleRowView
 
 import cogs.twitter.api.twitter as twitter_api
 import cogs.twitter.api.anthropic as anthropic_api
+import cogs.twitter.api.pixiv as pixiv_api
 from cogs.twitter import database
 from cogs.twitter import utils
 
 import sql_database
 
 from PIL import Image
+from urllib.parse import urlparse
 import aiohttp
 import io
 import asyncio
@@ -32,9 +35,9 @@ class Twitter(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
-    @app_commands.command(name = "twitter_create", description = "從 Twitter 自動建立品書")
+    @app_commands.command(name = "magic", description = "從 Twitter/Pixiv 自動建立品書")
     @app_commands.describe(url = "品書 URL")
-    async def twitter_create(self, interaction: Interaction, url: str):
+    async def magic(self, interaction: Interaction, url: str):
         
         if interaction.channel_id in utils.DEFAULT_DAY1_CHANNELS:
             day = 1
@@ -44,15 +47,36 @@ class Twitter(commands.Cog):
             await interaction.response.send_message("❌請在指定的品書頻道使用此指令！", ephemeral=True)
             return
         
-
         await interaction.response.defer(ephemeral=True)
+
+        link_domain = None
+        async with aiohttp.ClientSession(
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"},
+            max_line_size=8190 * 5,
+            max_field_size=8190 * 5,
+        ) as session:
+            async with session.get(url, allow_redirects=True, timeout=5) as response:
+                domain = urlparse(str(response.url)).netloc.lower()
+                if domain.endswith("twitter.com") or domain.endswith("x.com"):
+                    link_domain = 'Twitter'
+                elif domain.endswith("pixiv.net"):
+                    link_domain = 'Pixiv'
+
+        if not link_domain:
+            await interaction.followup.send("❌ 這不是一個有效的 Twitter/Pixiv 品書連結！", ephemeral=True)
+            return
+
         try:
-            name, title, content, media_links = twitter_api.get_twitter_details(url)
-        except Exception as e:
-            await interaction.followup.send(f"❌ 無法從 Twitter 獲取資料", ephemeral=True)
+            if link_domain == 'Twitter':
+                name, title, content, media_links = await twitter_api.get_twitter_details(url)
+            elif link_domain == 'Pixiv':
+                name, title, content, media_links = await pixiv_api.get_pixiv_details(url)
+        except Exception:
+            traceback.print_exc()
+            await interaction.followup.send(f"❌ 無法獲取資料，請稍後再試", ephemeral=True)
             return
     
-        circle_data = database.find_circle_by_tweeter_name(name, day)
+        circle_data = database.find_circle_by_user_name(link_domain, name, day)
         
         if not circle_data:
             gpt_circle_data = await anthropic_api.gen_circle_by_tweet_data(title, content, day)
@@ -64,8 +88,9 @@ class Twitter(commands.Cog):
             circle_data.row = circle_data.row or gpt_circle_data.row
             circle_data.booth = circle_data.booth or gpt_circle_data.booth
             circle_data.has_two_days = gpt_circle_data.has_two_days
-            
-        circle_data.twitter_link = 'https://x.com/' + name
+
+        circle_data.user_id = name
+        circle_data.link_domain = link_domain
         circle_data.shinagaki_img_urls = media_links
         circle_data.day = day
 
@@ -230,7 +255,7 @@ class Twitter(commands.Cog):
                     cancel_btn.disabled = True
                     await interaction.edit_original_response(view=view)
 
-                    files = await self._generate_shinagaki_images(circle_data.shinagaki_img_urls)
+                    files = await self._generate_shinagaki_images(circle_data.link_domain, circle_data.shinagaki_img_urls)
                     await self._create_shinagaki_thread(interaction, circle_data, files)
 
 
@@ -251,7 +276,7 @@ class Twitter(commands.Cog):
                 confirm_btn.callback = confirm_btn_callback
                 cancel_btn.callback = cancel_btn_callback
 
-                await interaction.edit_original_response(content=f"🖼️偵測到 Twitter 推文中附有圖片、要把圖片傳到品書串嗎？", view=view, embed=None)
+                await interaction.edit_original_response(content=f"🖼️偵測到 {circle_data.link_domain} 推文中附有圖片、要把圖片傳到品書串嗎？", view=view, embed=None)
 
             else:
                 # 如果沒有圖片，直接建立品書串
@@ -292,8 +317,14 @@ class Twitter(commands.Cog):
 
     async def _create_shinagaki_thread(self, interaction: discord.Interaction, circle_data: utils.CircleForm, files: list[discord.File] = None) -> discord.Thread:
 
+        SOCIAL_LINK_PREFIX = {
+            'Twitter': 'https://x.com/',
+            'Pixiv': 'https://www.pixiv.net/users/'
+        }
+
         msg_title = utils.gen_thread_title(circle_data)
-        thread_msg = f"{msg_title}\n{circle_data.twitter_link}\n攤位級別 : {database.get_space_cat(circle_data)}\n備註 :{circle_data.remarks}"
+        author_link = SOCIAL_LINK_PREFIX[circle_data.link_domain] + circle_data.user_id
+        thread_msg = f"{msg_title}\n{author_link}\n攤位級別 : {database.get_space_cat(circle_data)}\n備註 :{circle_data.remarks}"
 
         cur_day_channels = utils.DAY1_CHANNELS if circle_data.day == 1 else utils.DAY2_CHANNELS
 
@@ -333,25 +364,39 @@ class Twitter(commands.Cog):
         
 
 
-    async def _generate_shinagaki_images(self, media_links: list):
+    async def _generate_shinagaki_images(self, link_domain: str, media_links: list):
+
+        images = []
+
+        if link_domain == 'Pixiv':
+            for url in media_links:
+                image_data = await pixiv_api.download_image(url)
+                image_data.seek(0)
+                images.append(image_data)
+        else:
+            for idx, url in enumerate(media_links):
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        image_data = io.BytesIO(await response.content.read())
+                        image_data.seek(0)
+                        images.append(image_data)
 
         files = []
-        for idx, url in enumerate(media_links):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    image_data = io.BytesIO(await response.content.read())
+        for idx, image_data in enumerate(images):
+            if idx >= 10:
+                break
 
-                    image_data.seek(0)
-                    """
-                    image = Image.open(image_data)
+            compressed_image_data: io.BytesIO = image_data
+            next_quality = 85
+            while next_quality > 0 and len(compressed_image_data.getvalue()) > 1024 * 1024 * 1.5:  # 1.5 MB
+                image = Image.open(image_data)
+                compressed_image_data = io.BytesIO()
+                image.save(compressed_image_data, format="JPEG", optimize=True, quality=next_quality)
+                compressed_image_data.seek(0)
+                next_quality -= 5
 
-                    # Compress the image
-                    compressed_image_data = io.BytesIO()
-                    image.save(compressed_image_data, format="JPEG", optimize=True, quality=85)
-                    compressed_image_data.seek(0)
-                    """
-                    files.append(discord.File(image_data, filename=f"image_{idx + 1}.jpg"))
-                    
+            files.append(discord.File(compressed_image_data, filename=f"image_{idx + 1}.jpg"))
+
         return files
 
 

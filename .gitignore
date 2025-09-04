@@ -9,6 +9,7 @@ wheels/
 # Virtual environments
 .venv
 db-data
+pgadmin-data
 
 .env
 *.db

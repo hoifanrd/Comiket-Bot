@@ -14,7 +14,8 @@ class CircleForm(object):
         self.remarks = ""
         self.has_two_days = False
 
-        self.twitter_link = ""
+        self.user_id = ""
+        self.link_domain = ""     # 'Twitter' or 'Pixiv'
         self.day = 0
         self.shinagaki_img_urls = []
 

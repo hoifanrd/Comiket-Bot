@@ -2,6 +2,10 @@ from urllib.parse import unquote
 from const import *
 import json
 import unicodedata
+import requests
+import time
+
+from bs4 import BeautifulSoup
 
 MAIN_HALL = "e456"
 WALL_BLOCKS = ["ね"]
@@ -205,8 +209,10 @@ def normalize_locate(hall_data: dict):
 
 
 def gen_circle_data(circle_list):
+    max_page = 0
+
     res = dict()
-    for l in circle_list:
+    for _, l in enumerate(circle_list):
         for circle in l:
             
             circle_id = circle[0]
@@ -221,13 +227,55 @@ def gen_circle_data(circle_list):
                 "Author": author_name,
                 "Block": block,
                 "CircleId": circle_id,
-                "IsTwitterRegistered": False,
                 "Name": circle_name,
                 "Space": circle_key
             }
 
             res[circle_key] = circle_data
-    
+
+
+    # Get circle details
+    session = requests.Session()
+    main_page = session.get(
+        url="https://comitia-webcatalog.net/catalog",
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
+        }
+    )
+
+    soup = BeautifulSoup(main_page.text, 'html.parser')
+    csrf_token = soup.find('meta', attrs={'name': 'csrf-token'})['content']
+
+    num_pages = len(circle_list)
+    for page in range(1, num_pages+1):
+        print(f"Fetching page {page}/{num_pages}")
+        resp = session.post(
+            url="https://comitia-webcatalog.net/catalog/load",
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+                "X-CSRF-Token": csrf_token,
+            },
+            data={"page": str(page)}
+        )
+        resp_json = resp.json()
+        page_circle_data = json.loads(resp_json[0])
+        
+        for circle in page_circle_data:
+            circle_key = unicodedata.normalize('NFKC', circle['block']) + circle['no'] + circle['ab']
+            if circle_key not in res:
+                raise Exception(f"Circle {circle_key} not found in circle list")
+            
+            additional_data = {
+                "IsPixivRegistered": bool(circle['url_pi']),
+                "PixivUrl": circle['url_pi'] if circle['url_pi'] else '',
+                "IsTwitterRegistered": bool(circle['url_tw']),
+                "TwitterUrl": circle['url_tw'] if circle['url_tw'] else '',
+            }
+
+            res[circle_key].update(additional_data)
+
+        time.sleep(1)       # Be nice to the server
+
     return {"1": {MAIN_HALL: res}}
 
 

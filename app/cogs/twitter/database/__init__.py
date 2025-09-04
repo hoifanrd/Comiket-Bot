@@ -130,16 +130,27 @@ def get_all_specific_halls():
     return res
 
 
-def find_circle_by_tweeter_name(username: str, day: int):
+def find_circle_by_user_name(link_domain: str, username: str, day: int):
+
+    def is_twitter_match(booth_data) -> bool:
+        return booth_data['IsTwitterRegistered'] and ('https://twitter.com/' + username == booth_data['TwitterUrl'] or \
+            'https://x.com/' + username == booth_data['TwitterUrl'])
+    
+    def is_pixiv_match(booth_data) -> bool:
+        return booth_data['IsPixivRegistered'] and ('https://www.pixiv.net/users/' + username == booth_data['PixivUrl'] or \
+            'https://www.pixiv.net/member.php?id=' + username == booth_data['PixivUrl'])
+
+    check_func = {
+        'Twitter': is_twitter_match,
+        'Pixiv': is_pixiv_match
+    }
 
     day_data = CIRCLE_DATA.get(str(day), {})
 
     res = utils.CircleForm()
     for hall, booth_datas in day_data.items():
         for booth, booth_data in booth_datas.items():
-            if booth_data['IsTwitterRegistered'] and ('https://twitter.com/' + username in booth_data['TwitterUrl'] or \
-            'https://x.com/' + username in booth_data['TwitterUrl']):
-                
+            if check_func[link_domain](booth_data):
                 res.circle_name = booth_data['Name']
                 res.author_name = booth_data['Author']
                 res.row = booth[0]
@@ -156,13 +167,11 @@ def find_circle_by_tweeter_name(username: str, day: int):
 
 
     # 如果當天找到，則檢查下一天都有沒有
-    another_day_data = CIRCLE_DATA[str(day % 2 + 1)]
+    another_day_data = CIRCLE_DATA.get(str(day % 2 + 1), {})
 
     for _, booth_datas in another_day_data.items():
         for booth, booth_data in booth_datas.items():
-            if booth_data['IsTwitterRegistered'] and ('https://twitter.com/' + username in booth_data['TwitterUrl'] or \
-            'https://x.com/' + username in booth_data['TwitterUrl']):
-                
+            if check_func[link_domain](booth_data):
                 res.has_two_days = True
                 break
             
