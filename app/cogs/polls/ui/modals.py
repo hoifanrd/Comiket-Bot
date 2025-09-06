@@ -33,19 +33,19 @@ class AddItemModal(Modal):
             # 使用正則表達式分離項目名稱和價格
             match = re.match(r"(.+?)\s+(\d+)$", line)
             if not match:
-                errors.append(f"第{i}行: 格式錯誤（需要項目名稱和價格）")
+                errors.append(f"- 第{i}行: 格式錯誤（需要項目名稱和價格）")
                 continue
                 
             item_name = match.group(1).strip()
             try:
                 price = int(match.group(2))
-                if price <= 0:
-                    errors.append(f"第{i}行: 價格必須是正整數")
+                if price < 0:
+                    errors.append(f"- 第{i}行: 價格不能是負數")
                     continue
                     
                 valid_items.append((item_name, price))
             except ValueError:
-                errors.append(f"第{i}行: 無效的價格 '{match.group(2)}'")
+                errors.append(f"- 第{i}行: 無效的價格 '{match.group(2)}'")
         
         if errors:
             error_msg = "\n".join(errors[:5])  # 最多顯示5個錯誤

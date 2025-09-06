@@ -209,7 +209,6 @@ def normalize_locate(hall_data: dict):
 
 
 def gen_circle_data(circle_list):
-    max_page = 0
 
     res = dict()
     for _, l in enumerate(circle_list):

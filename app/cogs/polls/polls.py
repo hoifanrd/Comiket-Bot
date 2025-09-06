@@ -20,17 +20,21 @@ class Polls(commands.Cog):
             'pause_all_polls': PauseAllPollCommand(self),
             'resume_poll': ResumePollCommand(self),
             'resume_all_polls': ResumeAllPollCommand(self),
-            'my_order': MyOrderCommand(self)
+            'my_order': MyOrderCommand(self),
+            'move_poll': MovePollCommand(self)
         }
-        
 
-    @app_commands.command(name = "create_poll", description = "為此討論串創建一個新的投票")
+
+    poll_groups = app_commands.Group(name="poll", description="投票相關命令")
+
+
+    @poll_groups.command(name = "create", description = "為此討論串創建一個新的投票")
     async def create_poll(self, interaction: discord.Interaction):
         await self.commands['create_poll'].on_execute(interaction)
         
 
 
-    @app_commands.command(name = "end_poll", description = "結束投票")
+    @poll_groups.command(name = "end", description = "結束投票")
     @app_commands.describe(poll_id="要結束的投票ID (或 'all' 結束所有投票)")
     async def end_poll(self, interaction: discord.Interaction, poll_id: str | None):
         if poll_id is not None and poll_id.lower() == 'all':
@@ -48,7 +52,7 @@ class Polls(commands.Cog):
         
 
 
-    @app_commands.command(name = "pause_poll", description = "暫停投票")
+    @poll_groups.command(name = "pause", description = "暫停投票")
     @app_commands.describe(poll_id="要暫停的投票ID (或 'all' 暫停所有投票)")
     async def Pause(self, interaction: discord.Interaction, poll_id: str | None):
         if poll_id is not None and poll_id.lower() == 'all':
@@ -66,7 +70,7 @@ class Polls(commands.Cog):
         
 
 
-    @app_commands.command(name = "resume_poll", description = "恢復投票")
+    @poll_groups.command(name = "resume", description = "恢復投票")
     @app_commands.describe(poll_id="要恢復的投票ID (或 'all' 恢復所有投票)")
     async def Resume(self, interaction: discord.Interaction, poll_id: str | None):
         if poll_id is not None and poll_id.lower() == 'all':
@@ -81,11 +85,20 @@ class Polls(commands.Cog):
             return
 
         await self.commands['resume_poll'].on_execute(interaction, poll_id)
-    
+
+
+
+    @poll_groups.command(name = "move", description = "將一個投票的所有數據覆蓋到另一個投票")
+    @app_commands.describe(from_id="要移動的投票ID", to_id="要覆蓋的投票ID")
+    async def move_poll(self, interaction: discord.Interaction, from_id: int, to_id: int):
+        await self.commands['move_poll'].on_execute(interaction, from_id, to_id)
+
+
 
     @app_commands.command(name = "myorder", description = "生成用戶所有投票的品項列表")
     async def my_order(self, interaction: discord.Interaction):
         await self.commands['my_order'].on_execute(interaction)
+
 
 
     @commands.Cog.listener()

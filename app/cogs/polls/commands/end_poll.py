@@ -27,7 +27,8 @@ class EndPollCommand:
             await interaction.response.send_message("❌ 權限不足：只有投票創建者或管理員可以結束投票", ephemeral=True)
             return
 
-        if await sql_database.get_poll_status(poll_id) == "Ended":
+        poll_status = await sql_database.get_poll_status(poll_id)
+        if poll_status != "Active" and poll_status != "Paused":
             await interaction.response.send_message("❌ 投票已經結束", ephemeral=True)
             return
     

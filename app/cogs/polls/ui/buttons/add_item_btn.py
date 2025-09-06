@@ -47,11 +47,11 @@ class AddItemButton(Button):
         # 批量添加項目（最多填滿25個位置）
         for i, (item_name, price) in enumerate(modal.new_items):
             if i >= remaining_slots:
-                errors.append(f"❌ 只能添加 {remaining_slots} 個項目（已達上限）")
+                errors.append(f"- 只能添加 {remaining_slots} 個項目（已達上限）")
                 break
                 
             if item_name in poll_items:
-                errors.append(f"❌ 項目 '{item_name}' 已存在")
+                errors.append(f"- 項目 '{item_name}' 已存在")
                 continue
                 
             added_items.append((item_name, price))

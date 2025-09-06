@@ -33,7 +33,7 @@ async def init_db():
                 poll_id INTEGER NOT NULL,
                 price INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (name, poll_id),
-                CONSTRAINT fk_items_polls FOREIGN KEY(poll_id) REFERENCES polls(poll_id) ON DELETE CASCADE
+                CONSTRAINT fk_items_polls FOREIGN KEY(poll_id) REFERENCES polls(poll_id) ON DELETE CASCADE ON UPDATE CASCADE
             )
         ''')
 
@@ -45,7 +45,7 @@ async def init_db():
                 name TEXT NOT NULL,
                 need_single BOOLEAN DEFAULT NULL,
                 voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_votes_items FOREIGN KEY(name, poll_id) REFERENCES items(name, poll_id) ON DELETE CASCADE
+                CONSTRAINT fk_votes_items FOREIGN KEY(name, poll_id) REFERENCES items(name, poll_id) ON DELETE CASCADE ON UPDATE CASCADE
             )
         ''')
 
@@ -60,9 +60,20 @@ async def init_db():
                 author_name TEXT,
                 hall TEXT,
                 space_cat TEXT,
+                social_link TEXT,
                 remarks TEXT,
                 channel_id NUMERIC(30) UNIQUE,
                 PRIMARY KEY (event_name, day, block, space_no)
+            )
+        ''')
+
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS circle_status (
+                channel_id NUMERIC(30),
+                user_id NUMERIC(30),
+                status TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_status_circle FOREIGN KEY(channel_id) REFERENCES circles(channel_id) ON DELETE CASCADE ON UPDATE CASCADE
             )
         ''')
 
@@ -308,6 +319,21 @@ async def get_paused_polls():
 
         return rtn
 
+async def swap_poll_channel_message(poll_id1: int, poll_id2: int):
+    async with poll.acquire() as conn:
+        await conn.execute('''
+            UPDATE polls
+            SET channel_id = (CASE poll_id
+                                WHEN $1 THEN (SELECT channel_id FROM polls WHERE poll_id = $2)
+                                WHEN $2 THEN (select channel_id FROM polls WHERE poll_id = $1)
+                            END)
+              , message_id = (CASE poll_id
+                                WHEN $1 THEN (SELECT message_id FROM polls WHERE poll_id = $2)
+                                WHEN $2 THEN (select message_id FROM polls WHERE poll_id = $1)
+                            END)
+            WHERE poll_id IN ($1, $2);
+        ''', poll_id1, poll_id2)
+
 
 async def set_delete_poll_by_channel_id(channel_id: int):
     async with poll.acquire() as conn:
@@ -381,11 +407,11 @@ async def get_all_votes():
 # ==============================================================
 
 
-async def add_circle(circle_data: twitter_utils.CircleForm, space_cat: str, channel_id: int):
+async def add_circle(circle_data: twitter_utils.CircleForm, channel_id: int):
     async with poll.acquire() as conn:
         await conn.execute('''
-            INSERT INTO circles (event_name, day, block, space_no, circle_id, circle_name, author_name, hall, space_cat, remarks, channel_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO circles (event_name, day, block, space_no, circle_id, circle_name, author_name, hall, space_cat, social_link, remarks, channel_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ''',
             os.environ.get("CURR_EVENT"),
             circle_data.day,
@@ -395,7 +421,8 @@ async def add_circle(circle_data: twitter_utils.CircleForm, space_cat: str, chan
             circle_data.circle_name,
             circle_data.author_name,
             circle_data.hall,
-            space_cat,
+            circle_data.space_cat,
+            circle_data.social_link,
             circle_data.remarks,
             channel_id
         )
@@ -425,8 +452,72 @@ async def get_circle_by_event_day_row_booth(event_name: str, day: int, row: str,
             res.hall = rowDict['hall']
             res.remarks = rowDict['remarks']
             res.day = rowDict['day']
+            res.social_link = rowDict['social_link']
+            res.space_cat = rowDict['space_cat']
             res.channel_id = int(rowDict['channel_id'])
             
             return res
         
         return None
+
+
+async def get_circle_by_channel_id(channel_id: int):
+    async with poll.acquire() as conn:
+        row = await conn.fetchrow('''
+            SELECT * FROM circles WHERE channel_id = $1
+        ''', channel_id)
+
+        if row:
+            rowDict = row
+            res = twitter_utils.CircleForm()
+            res.circle_name = rowDict['circle_name']
+            res.author_name = rowDict['author_name']
+            res.row = rowDict['block']
+            res.booth = rowDict['space_no']
+            res.circle_id = rowDict['circle_id']
+            res.hall = rowDict['hall']
+            res.remarks = rowDict['remarks']
+            res.day = rowDict['day']
+            res.social_link = rowDict['social_link']
+            res.space_cat = rowDict['space_cat']
+            res.channel_id = int(rowDict['channel_id'])
+            
+            return res
+        
+        return None
+
+
+async def update_circle_remarks_by_channel_id(channel_id: int, new_remarks: str):
+    async with poll.acquire() as conn:
+        await conn.execute('''
+            UPDATE circles
+            SET remarks = $1
+            WHERE channel_id = $2
+        ''', new_remarks, channel_id)
+
+
+async def get_circles_by_day_hall(event_name: str, day: int, hall: str):
+    async with poll.acquire() as conn:
+        rows = await conn.fetch('''
+            SELECT * FROM circles WHERE event_name = $1 AND day = $2 AND hall = $3 ORDER BY block, space_no
+        ''', event_name, day, hall)
+
+        res = []
+        for row in rows:
+            rowDict = row
+            circle_data = twitter_utils.CircleForm()
+            circle_data.circle_name = rowDict['circle_name']
+            circle_data.author_name = rowDict['author_name']
+            circle_data.row = rowDict['block']
+            circle_data.booth = rowDict['space_no']
+            circle_data.circle_id = rowDict['circle_id']
+            circle_data.hall = rowDict['hall']
+            circle_data.remarks = rowDict['remarks']
+            circle_data.day = rowDict['day']
+            circle_data.social_link = rowDict['social_link']
+            circle_data.space_cat = rowDict['space_cat']
+            circle_data.channel_id = int(rowDict['channel_id'])
+            
+            res.append(circle_data)
+        
+        return res

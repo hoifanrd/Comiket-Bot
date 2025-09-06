@@ -3,7 +3,7 @@ import discord
 import io
 import datetime
 import xlsxwriter
-import asyncio
+import os
 
 from discord.ui import View, Button, Select
 
@@ -13,7 +13,6 @@ import cogs.twitter.database as circle_database
 
 PAGE_SIZE = 25
 HALF2FULL = dict((i, i + 0xFEE0) for i in range(0x21, 0x7F))
-
 
 # A workaround to allow async __init__ in a class
 class aobject(object):
@@ -26,7 +25,7 @@ class aobject(object):
         pass
 
 
-class MyOrderView(View, aobject):
+class PersistentMyOrderView(View, aobject):
     async def __init__(self, user_id: int):
         super().__init__(timeout=None)
         self.user_id = user_id
@@ -36,16 +35,19 @@ class MyOrderView(View, aobject):
         self.prev_page_btn = Button(
             label="上一頁",
             style=discord.ButtonStyle.primary,
-            disabled=True
+            disabled=True,
+            custom_id=f"myorder_{user_id}_prev"
         )
         self.next_page_btn = Button(
             label="下一頁",
             style=discord.ButtonStyle.primary,
-            disabled=len(self.embed_pages) <= 1
+            disabled=len(self.embed_pages) <= 1,
+            custom_id=f"myorder_{user_id}_next"
         )
         export_csv_btn = Button(
             label="匯出所有品項",
-            style=discord.ButtonStyle.green
+            style=discord.ButtonStyle.green,
+            custom_id=f"myorder_{user_id}_export"
         )
 
         self.selected_day = None
@@ -58,7 +60,8 @@ class MyOrderView(View, aobject):
                      discord.SelectOption(label="２日目", value='2')
             ],
             min_values=1,
-            max_values=1
+            max_values=1,
+            custom_id=f"myorder_{user_id}_day"
         )
 
         self.filter_hall_select = Select(
@@ -67,7 +70,8 @@ class MyOrderView(View, aobject):
                     [discord.SelectOption(label=hall.replace('e', '東').replace('w', '西').replace('s', '南').translate(HALF2FULL), value=hall)
                         for hall in circle_database.get_all_specific_halls()],
             min_values=1,
-            max_values=1
+            max_values=1,
+            custom_id=f"myorder_{user_id}_hall"
         )
 
         self.prev_page_btn.callback = self._on_prev_page
@@ -196,7 +200,7 @@ class MyOrderView(View, aobject):
         # ================= Generate embeds =================
         if not user_orders:
             embed = discord.Embed(
-                title="📋 我的訂單",
+                title=f"📋 我的訂單: {os.environ.get('CURR_EVENT', '未知活動').capitalize()}",
                 color=discord.Color.blue()
             )
 
@@ -206,7 +210,7 @@ class MyOrderView(View, aobject):
 
         all_embeds = []
         page_embed = discord.Embed(
-            title="📋 我的訂單",
+            title=f"📋 {os.environ.get('CURR_EVENT', '未知活動').capitalize()}: 我的訂單",
             color=discord.Color.blue()
         )
         field_in_page = 0

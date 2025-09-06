@@ -5,18 +5,27 @@ import itertools
 from discord.ext import commands
 
 import sql_database
-from cogs.polls.ui.views import PersistentPollView
+from cogs.polls.ui.views import PersistentPollView, PersistentMyOrderView
 
 discord.utils.setup_logging(level=discord.utils.logging.INFO)
-intents = discord.Intents.all()
+intents = discord.Intents.default()
+intents.members = True
 bot = commands.Bot(command_prefix = os.getenv("PREFIX", "!"), intents=intents)
 
 # 當機器人完成啟動時
 @bot.event
 async def on_ready():
     slash = await bot.tree.sync()
+    
+    # Add myorder views
+    # It's not put in setup_hook because setup_hook runs before the bot is connected to the webgateway.
+    for member in bot.get_all_members():
+        if member.bot: continue
+        bot.add_view(await PersistentMyOrderView(user_id=member.id))
+    
     print(f"目前登入身份 --> {bot.user}")
     print(f"載入 {len(slash)} 個斜線指令")
+
 
 # 載入指令程式檔案
 @bot.command()

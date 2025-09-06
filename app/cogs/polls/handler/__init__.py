@@ -57,12 +57,15 @@ async def generate_results_embed(poll_id):
 
 
 
-async def update_poll_message(channel: discord.Thread , poll_id: int):
+async def update_poll_message(channel: discord.Thread, poll_id: int):
 
     if channel is None:
         return False
 
     status = await sql_database.get_poll_status(poll_id)
+
+    if status == 'Deleted':
+        return False
 
     item_list = await sql_database.get_items_by_poll(poll_id)
     title = await sql_database.get_poll_title(poll_id)

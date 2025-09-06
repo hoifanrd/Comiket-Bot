@@ -6,3 +6,4 @@ from .pauseall_poll import PauseAllPollCommand
 from .resume_poll import ResumePollCommand
 from .resumeall_poll import ResumeAllPollCommand
 from .myorder import MyOrderCommand
+from .move_poll import MovePollCommand

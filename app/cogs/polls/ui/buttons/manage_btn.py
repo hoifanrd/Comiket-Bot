@@ -1,5 +1,6 @@
 from discord.ui import Button, Select
 import discord
+import asyncio
 
 import cogs.polls.ui.views as views
 
@@ -126,7 +127,7 @@ class ManageButton(Button):
                 await handler.update_poll_message(interaction.channel, self.poll_id)
 
                 await interaction.followup.send(
-                    f"✅ 項目已更新: `{edit_item}` → `{new_name} ({new_price}円)`",
+                    f"✅ 項目已更新: `{discord.utils.escape_mentions(edit_item)}` → `{discord.utils.escape_mentions(new_name)} ({new_price}円)`",
                     ephemeral=False
                 )
             
@@ -197,6 +198,8 @@ class ManageButton(Button):
                 content="管理操作已取消",
                 view=None
             )
+            await asyncio.sleep(2)
+            await interaction.delete_original_response()
 
         # 設置回調
         select.callback = select_callback

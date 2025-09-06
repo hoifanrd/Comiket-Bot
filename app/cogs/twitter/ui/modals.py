@@ -62,7 +62,7 @@ class CircleInfoModal(Modal):
             required=False,
             default=circle_data.remarks,
             min_length=0,
-            max_length=100
+            max_length=200
         )
 
         self.add_item(self.author_input)
@@ -74,5 +74,28 @@ class CircleInfoModal(Modal):
         self.author_name = self.author_input.value.strip()
         self.circle_name = self.circle_input.value.strip()
         self.addition = self.addition_input.value.strip()
+        await interaction.response.defer(ephemeral=True)
+        self.stop()
+
+
+class EditRemarksModal(Modal):
+    """編輯備註的模態窗口"""
+    def __init__(self, current_remarks: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.remarks_input = TextInput(
+            label="備註",
+            placeholder="請輸入備註（如有）",
+            style=discord.TextStyle.paragraph,
+            required=False,
+            default=current_remarks,
+            min_length=0,
+            max_length=200
+        )
+
+        self.add_item(self.remarks_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.new_remarks = self.remarks_input.value.strip()
         await interaction.response.defer(ephemeral=True)
         self.stop()
